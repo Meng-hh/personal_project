@@ -97,19 +97,21 @@ public class DownloadController {
 
         Path targetPath = Paths.get(URLDecoder.decode(path, StandardCharsets.UTF_8));
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         if (Files.isDirectory(targetPath)) {
             // 处理目录下载（需要实现打包逻辑）
+            headers.add(HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"" +URLEncoder.encode(targetPath.getFileName().toString(), StandardCharsets.UTF_8)  + ".zip\"");
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + targetPath.getFileName() + ".zip\"")
+                    .headers(headers)
                     .body(zipDirectory(targetPath));
         } else {
             // 处理文件下载
             Resource resource = new FileSystemResource(targetPath);
-            HttpHeaders headers = new HttpHeaders();
             headers.add(HttpHeaders.CONTENT_DISPOSITION,
                     "attachment; filename=\"" + URLEncoder.encode(resource.getFilename(), StandardCharsets.UTF_8) + "\"");
-            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+
             return ResponseEntity.ok()
                     .headers(headers)
                     .body(resource);
