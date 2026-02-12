@@ -58,8 +58,7 @@ public class DownloadController {
     ) {
         // 使用URL解码
         String decodedPath = URLDecoder.decode(path, StandardCharsets.UTF_8);
-        // 转换路径分隔符（可选）
-        decodedPath = decodedPath.replace("/", "\\");
+
 
         Path basePath = Paths.get(decodedPath);
         DirectoryResponse response = new DirectoryResponse();

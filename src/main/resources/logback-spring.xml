@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 日志级别从低到高分为TRACE < DEBUG < INFO < WARN < ERROR < FATAL，如果设置为WARN，则低于WARN的信息都不会输出 -->
+<configuration scan="true" scanPeriod="10 seconds">
+
+    <!-- 1. 核心属性配置 -->
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="my-app"/>
+    <!-- 日志存储路径，生产环境建议挂载外部磁盘 -->
+    <property name="LOG_PATH" value="./logs"/>
+
+    <!-- 2. 输出格式 -->
+    <!-- 彩色日志格式 (用于控制台) -->
+    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %magenta([%X{traceId}]) %cyan(%logger{50}) - %msg%n"/>
+    <!-- 文件日志格式 (无需彩色，包含 traceId) -->
+    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%X{traceId}] %logger{50} - %msg%n"/>
+
+    <!-- 3. 控制台输出 Appender (开发/测试环境) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 4. 文件输出 Appender (生产环境) -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}.log</file>
+        <!-- 滚动策略: 基于时间 + 大小 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- 每天一个文件，压缩归档 -->
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <!-- 单个文件最大 100MB -->
+            <maxFileSize>100MB</maxFileSize>
+            <!-- 保留最近 30 天 -->
+            <maxHistory>30</maxHistory>
+            <!-- 总大小限制 2GB -->
+            <totalSizeCap>2GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 5. 异步输出 Appender (提升高并发性能) -->
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <!-- 不丢失日志. 默认如果队列剩下20%容量会丢弃TRACT、DEBUG、INFO日志，这里设置为0表示不丢弃 -->
+        <discardingThreshold>0</discardingThreshold>
+        <!-- 更改默认的队列的深度,该值会影响性能.默认值为256 -->
+        <queueSize>512</queueSize>
+        <!-- 添加附加的appender,最多只能添加一个 -->
+        <appender-ref ref="FILE"/>
+    </appender>
+
+    <!-- 6. 环境区分配置 -->
+    <!-- 开发环境: 打印控制台，级别 DEBUG -->
+    <springProfile name="dev,local">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+        <!-- 特定包开启 DEBUG -->
+        <logger name="com.example.project" level="DEBUG"/>
+    </springProfile>
+
+    <!-- 生产/测试环境: 打印文件(异步)，级别 INFO -->
+    <springProfile name="prod,test">
+        <root level="INFO">
+            <appender-ref ref="ASYNC_FILE"/>
+        </root>
+    </springProfile>
+
+</configuration>
